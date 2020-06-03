@@ -17,15 +17,15 @@ namespace Helix {
 
 		class PaintMultipleStrandsWithProgressBar : public Controller::PaintMultipleStrandsNoUndoNoOverrideFunctor {
 		public:
-			void operator() (Model::Strand strand, Model::Material & material) {
+			void operator() (Model::Strand strand, Model::Material& material) {
 				Controller::PaintMultipleStrandsNoUndoFunctor::operator()(strand, material);
 				MProgressWindow::advanceProgress(1);
 			}
 		};
 
-		static const char *str_strands[] = { "scaf", "stap" };
+		static const char* str_strands[] = { "scaf", "stap" };
 
-		MStatus JSONImporter::parseFile(const char *filename) {
+		MStatus JSONImporter::parseFile(const char* filename) {
 			MStatus status;
 
 			std::fstream file(filename, std::ios_base::in);
@@ -49,7 +49,7 @@ namespace Helix {
 			}
 
 			m_file.filename = filename;
-			Json::Value vstrands = root ["vstrands"], name = root ["name"];
+			Json::Value vstrands = root["vstrands"], name = root["name"];
 
 			if (name.isString())
 				m_file.name = name.asCString();
@@ -65,11 +65,11 @@ namespace Helix {
 
 			int average_col = 0, average_row = 0, total_num_operations = 0, longest_strand = 0;
 
-			for(Json::Value::iterator it = vstrands.begin(); it != vstrands.end(); ++it) {
-				average_col += (*it) ["col"].asInt();
-				average_row += (*it) ["row"].asInt();
+			for (Json::Value::iterator it = vstrands.begin(); it != vstrands.end(); ++it) {
+				average_col += (*it)["col"].asInt();
+				average_row += (*it)["row"].asInt();
 
-				int size = (*it) ["loop"].size();
+				int size = (*it)["loop"].size();
 				total_num_operations += size;
 
 				longest_strand = std::max(longest_strand, size);
@@ -123,15 +123,15 @@ namespace Helix {
 			 * We also create the bases right here, without connecting them to each other yet
 			 */
 
-			for(Json::Value::iterator it = vstrands.begin(); it != vstrands.end(); ++it) {
-				Json::Value & scaf = (*it) [str_strands[0]],
-							& stap = (*it) [str_strands[1]],
-							& loop = (*it) ["loop"],
-							& skip = (*it) ["skip"],
-							& num_value = (*it) ["num"],
-							& col = (*it) ["col"],
-							& row = (*it) ["row"],
-							& stap_colors = (*it) ["stap_colors"];
+			for (Json::Value::iterator it = vstrands.begin(); it != vstrands.end(); ++it) {
+				Json::Value& scaf = (*it)[str_strands[0]],
+					& stap = (*it)[str_strands[1]],
+					& loop = (*it)["loop"],
+					& skip = (*it)["skip"],
+					& num_value = (*it)["num"],
+					& col = (*it)["col"],
+					& row = (*it)["row"],
+					& stap_colors = (*it)["stap_colors"];
 
 				if (!scaf.isArray() || !stap.isArray() || !skip.isArray() || !loop.isArray() || !num_value.isNumeric() || !col.isNumeric() || !row.isNumeric() || scaf.size() != stap.size() || loop.size() != scaf.size() || skip.size() != loop.size()) {
 					MGlobal::displayError(MString("Syntax error in file \"") + filename + "\"");
@@ -153,8 +153,8 @@ namespace Helix {
 
 				int total_strand_length = 0; // Unchanged for every skip and increased for every loop
 
-				for(Json::Value::ArrayIndex i = 0; i < scaf.size(); ++i) {
-					int loop_int = loop [i].asInt(), skip_int = skip [i].asInt();
+				for (Json::Value::ArrayIndex i = 0; i < scaf.size(); ++i) {
+					int loop_int = loop[i].asInt(), skip_int = skip[i].asInt();
 					helix.loop.push_back(loop_int);
 					helix.skip.push_back(skip_int);
 
@@ -170,7 +170,9 @@ namespace Helix {
 
 				int scaf_direction = num % 2; // 0 = left to right, 1 = right to left
 
-				/* 
+				helix.direction = scaf_direction; /*Erik store the scaffold direction to use for later connection of deletions */
+
+				/*
 				 * For creating the honeycomb lattice
 				 */
 
@@ -196,8 +198,8 @@ namespace Helix {
 					return status;
 				}
 
-				double rotation[] = { M_PI * scaf_direction, 0.0, honeycomb_rotation_offset };
-					
+				double rotation[] = {  M_PI * scaf_direction, 0.0, M_PI / 2.0 /*honeycomb_rotation_offset*/ };
+
 				if (!(status = helix_transform.setRotation(rotation, MTransformationMatrix::kXYZ, MSpace::kTransform))) {
 					status.perror("MTransformationMatrix::setRotation");
 					return status;
@@ -224,35 +226,35 @@ namespace Helix {
 
 				int translation_index = 0;
 
-				for(Json::Value::ArrayIndex i = 0; i < scaf.size(); ++i) {
+				for (Json::Value::ArrayIndex i = 0; i < scaf.size(); ++i) {
 					Base scaf_base, stap_base;
-					Json::Value & scaf_indices = scaf[i], & stap_indices = stap[i];
-					int & loop_int = helix.loop[i], & skip_int = helix.skip[i];
+					Json::Value& scaf_indices = scaf[i], & stap_indices = stap[i];
+					int& loop_int = helix.loop[i], & skip_int = helix.skip[i];
 
-					for(int j = 0; j < 4; ++j) {
+					for (int j = 0; j < 4; ++j) {
 						scaf_base.connections[j] = scaf_indices[j].asInt();
 						stap_base.connections[j] = stap_indices[j].asInt();
 					}
 
-					if (!skip_int) {
+					if (skip_int == 0) {
 						scaf_base.bases.reserve(loop_int + 1);
 						stap_base.bases.reserve(loop_int + 1);
 
-						for(int j = 0; j < loop_int + 1; ++j) {
+						for (int j = 0; j < loop_int + 1; ++j) {
 							//int index = scaf_direction == 1 ? (- translation_index - 1) : translation_index;
 							//int index = translation_index * (-scaf_direction + ((scaf_direction + 1) % 2)) - scaf_direction;
 							int index = (scaf_direction * 2 - 1) * -translation_index - scaf_direction;
 
 							MVector forward_vector, backward_vector;
 
-							DNA::CalculateBasePairPositions((double) index, forward_vector, backward_vector, 0.0, scaf_direction == 0 ? longest_strand : -longest_strand);
+							DNA::CalculateBasePairPositions((double)index, forward_vector, backward_vector, 0.0, scaf_direction == 0 ? longest_strand : -longest_strand);
 
 							if (scaf_base.isValid()) {
 								// Create the base for the loop index j at index
 
 								Model::Base base;
-								MString name = MString(str_strands[0]) + (int) i;
-								
+								MString name = MString(str_strands[0]) + (int)i;
+
 								if (j > 0)
 									name += "_loop" + j;
 
@@ -268,8 +270,8 @@ namespace Helix {
 								// Create the base for the loop index j at index
 
 								Model::Base base;
-								MString name = MString(str_strands[1]) + "_" + (int) i;
-								
+								MString name = MString(str_strands[1]) + "_" + (int)i;
+
 								if (j > 0)
 									name += "_loop_" + j;
 
@@ -307,7 +309,7 @@ namespace Helix {
 							 * Connect scaffold forward and staples backward
 							 */
 
-							for(int j = 0; j < loop_int; ++j) {
+							for (int j = 0; j < loop_int; ++j) {
 								if (scaf_base.isValid()) {
 									if (!(status = scaf_base.bases[j].connect_forward(scaf_base.bases[j + 1], true))) {
 										status.perror("Model::Base::connect_forward 1 1");
@@ -328,7 +330,7 @@ namespace Helix {
 							 * Connect scaffold backward and staples forward
 							 */
 
-							for(int j = 0; j < loop_int; ++j) {
+							for (int j = 0; j < loop_int; ++j) {
 								if (scaf_base.isValid()) {
 									if (!(status = scaf_base.bases[j + 1].connect_forward(scaf_base.bases[j], true))) {
 										status.perror("Model::Base::connect_forward 2 1");
@@ -366,9 +368,9 @@ namespace Helix {
 				 */
 
 				if (!(status = helix.helix.setCylinderRange(
-						(double(-total_strand_length + (lowest_valid_base_index + highest_valid_base_index)) / 2.0 * DNA::STEP - DNA::Z_SHIFT) * (1 - scaf_direction * 2), 
-						(highest_valid_base_index - lowest_valid_base_index) * DNA::STEP
-					))) {
+					(double(-total_strand_length + (lowest_valid_base_index + highest_valid_base_index)) / 2.0 * DNA::STEP - DNA::Z_SHIFT) * (1 - scaf_direction * 2),
+					(highest_valid_base_index - lowest_valid_base_index) * DNA::STEP
+				))) {
 					status.perror("Helix::setCylinderRange");
 					return status;
 				}
@@ -377,8 +379,8 @@ namespace Helix {
 				 * Now iterate over stap_colors and extract the base and its material
 				 */
 
-				for(Json::Value::iterator it = stap_colors.begin(); it != stap_colors.end(); ++it) {
-					int index = (*it) [0].asInt(), color = (*it) [1].asInt();
+				for (Json::Value::iterator it = stap_colors.begin(); it != stap_colors.end(); ++it) {
+					int index = (*it)[0].asInt(), color = (*it)[1].asInt();
 
 					float c[] = { float(color >> 16) / 0x100, float((color >> 8) & 0xFF) / 0x100, float(color & 0xFF) / 0x100 };
 
@@ -409,10 +411,10 @@ namespace Helix {
 			 * Now, using the binary structure (and the generated bases), connect them to each other
 			 */
 
-			for(std::map<int, Helix>::iterator it = m_file.helices.begin(); it != m_file.helices.end(); ++it) {
+			for (std::map<int, Helix>::iterator it = m_file.helices.begin(); it != m_file.helices.end(); ++it) {
 				//int index = 0;
 
-				for(size_t i = 0; i < it->second.scaf.size(); ++i) {
+				for (size_t i = 0; i < it->second.scaf.size(); ++i) {
 					if (it->second.scaf[i].isValid()) {
 						/*
 						 * There's a base here that's not [ -1, -1, -1, -1 ] thus look at its connections and connect it!
@@ -420,30 +422,54 @@ namespace Helix {
 						 * the ones inbetween have already been linked above
 						 */
 
-						if (it->second.scaf[i].hasPreviousConnection()) {
-							/*
-							 * Has a backward connection
-							 */
+						//if (it->second.scaf[i].hasPreviousConnection()) {
+						//	/*
+						//	 * Has a backward connection
+						//	 */
 
-							Base & backward = m_file.helices[it->second.scaf[i].connections[0]].scaf[it->second.scaf[i].connections[1]];
+						//	Base& backward = m_file.helices[it->second.scaf[i].connections[0]].scaf[it->second.scaf[i].connections[1]];
 
-							if (!(status = backward.bases[backward.bases.size() - 1].connect_forward(it->second.scaf[i].bases[0], true))) {
-								status.perror("Model::Base::connect_forward scaf 1");
-								return status;
-							}
-						}
+						//	if (!(status = backward.bases[backward.bases.size() - 1].connect_forward(it->second.scaf[i].bases[0], true))) {
+						//		status.perror("Model::Base::connect_forward scaf 1");
+						//		return status;
+						//	}
+						//}
 
-						if (it->second.scaf[i].hasNextConnection()) {
+						if (it->second.scaf[i].hasNextConnection() && it->second.scaf[i].bases.size() > 0) {/*Erik, also check that you are not trying to connect from a deleted base*/
 							/*
 							 * Has a forward connection
 							 */
 
-							Base & forward = m_file.helices[it->second.scaf[i].connections[2]].scaf[it->second.scaf[i].connections[3]];
+							/*Base& forward = m_file.helices[it->second.scaf[i].connections[2]].scaf[it->second.scaf[i].connections[3]];*/
 
-							if (!(status = it->second.scaf[i].bases[it->second.scaf[i].bases.size() - 1].connect_forward(forward.bases[0], true))) {
-								status.perror("Model::Base::connect_forward scaf 2");
-								return status;
+							int forward_helix = it->second.scaf[i].connections[2];
+							int forward_base = it->second.scaf[i].connections[3];
+
+							if (m_file.helices[forward_helix].scaf[forward_base].bases.size() < 1) {
+								if (it->second.direction == 0) {
+									forward_base += 1;
+								}
+								else {
+									forward_base += -1;
+								}
 							}
+
+							Base& forward = m_file.helices[forward_helix].scaf[forward_base];
+
+
+							if (it->second.direction == 0) {
+								if (!(status = it->second.scaf[i].bases[it->second.scaf[i].bases.size() - 1].connect_forward(forward.bases[0], true))) {
+									status.perror("Model::Base::connect_forward scaf 2");
+									return status;
+								}
+							}
+							else {
+								if (!(status = it->second.scaf[i].bases[0].connect_forward(forward.bases[forward.bases.size()-1], true))) {
+									status.perror("Model::Base::connect_forward scaf 2");
+									return status;
+								}
+							}
+							
 						}
 
 						/*
@@ -453,8 +479,8 @@ namespace Helix {
 						 * that already have a color assigned, the performance penalty should be minimal
 						 */
 
-						/*if (it->second.scaf[i].connections[0] != it->first)
-							paintBases.push_back(std::make_pair(it->second.scaf[i].bases[0], scaf_material));*/
+						 if (it->second.scaf[i].connections[0] != it->first)
+							 paintBases.push_back(std::make_pair(it->second.scaf[i].bases[0], scaf_material));
 					}
 
 					if (it->second.stap[i].isValid()) {
@@ -462,29 +488,50 @@ namespace Helix {
 						 * Also a valid base
 						 */
 
-						if (it->second.stap[i].hasPreviousConnection()) {
+						//if (it->second.stap[i].hasPreviousConnection()) {
+						//	/*
+						//	 * Has a backward connection
+						//	 */
+
+						//	Base& backward = m_file.helices[it->second.stap[i].connections[0]].stap[it->second.stap[i].connections[1]];
+
+						//	if (!(status = backward.bases[backward.bases.size() - 1].connect_forward(it->second.stap[i].bases[0], true))) {
+						//		status.perror("Model::Base::connect_forward stap 1");
+						//		return status;
+						//	}
+						//}
+						//TEMPDELETIONBELOW
+						if (it->second.stap[i].hasNextConnection() && it->second.stap[i].bases.size() > 0) {
 							/*
-							 * Has a backward connection
+							 * has a forward connection && is not a deletion 
 							 */
 
-							Base & backward = m_file.helices[it->second.stap[i].connections[0]].stap[it->second.stap[i].connections[1]];
+							int forward_helix = it->second.stap[i].connections[2];
+							int forward_base = it->second.stap[i].connections[3];
 
-							if (!(status = backward.bases[backward.bases.size() - 1].connect_forward(it->second.stap[i].bases[0], true))) {
-								status.perror("Model::Base::connect_forward stap 1");
-								return status;
+							if (m_file.helices[forward_helix].stap[forward_base].bases.size() < 1) {/*Erik check that you are not trying to connect to a deletion move on then*/
+								if (it->second.direction == 0) {
+									forward_base += -1;
+								}
+								else {
+									forward_base += 1;
+								}	
 							}
-						}
 
-						if (it->second.stap[i].hasNextConnection()) {
-							/*
-							 * Has a forward connection
-							 */
+							Base& forward = m_file.helices[forward_helix].stap[forward_base];
 
-							Base & forward = m_file.helices[it->second.stap[i].connections[2]].stap[it->second.stap[i].connections[3]];
 
-							if (!(status = it->second.stap[i].bases[it->second.stap[i].bases.size() - 1].connect_forward(forward.bases[0], true))) {
-								status.perror("Model::Base::connect_forward stap 2");
-								return status;
+							if (it->second.direction == 0) {/*ERik the direction of loop conections will vary with the direction of the helix*/
+								if (!(status = it->second.stap[i].bases[0].connect_forward(forward.bases[forward.bases.size() - 1], true))) {
+									status.perror("model::base::connect_forward stap 2");
+									return status;
+								}
+							}
+							else {
+								if (!(status = it->second.stap[i].bases[it->second.stap[i].bases.size() - 1].connect_forward(forward.bases[0], true))) {
+									status.perror("Model::Base::connect_forward stap 2");
+									return status;
+								}
 							}
 						}
 					}
@@ -497,7 +544,7 @@ namespace Helix {
 
 			if (!MProgressWindow::reserve())
 				MGlobal::displayWarning("Can't reserve progress window, no progress information will be presented");
-			MProgressWindow::setProgressRange(0, (int) paintBases.size());
+			MProgressWindow::setProgressRange(0, (int)paintBases.size());
 			MProgressWindow::setTitle("Importing json (caDNAno) file...");
 			MProgressWindow::setProgressStatus(MString("Painting strands"));
 			MProgressWindow::setInterruptable(false);
@@ -508,7 +555,7 @@ namespace Helix {
 			 */
 
 			PaintMultipleStrandsWithProgressBar functor;
-			for(std::list< std::pair<Model::Base, Model::Material> >::iterator it = paintBases.begin(); it != paintBases.end(); ++it)
+			for (std::list< std::pair<Model::Base, Model::Material> >::iterator it = paintBases.begin(); it != paintBases.end(); ++it)
 				functor(it->first, it->second);
 
 			HMEVALUATE(status = functor.status(), status);
@@ -527,7 +574,7 @@ namespace Helix {
 #ifndef __GNUC__
 			class {
 			public:
-				inline Model::Helix operator() (const std::map<int, Helix>::iterator & input) const {
+				inline Model::Helix operator() (const std::map<int, Helix>::iterator& input) const {
 					return input->second.helix;
 				}
 			} select_functor;
@@ -537,9 +584,9 @@ namespace Helix {
 			}
 #else
 			std::list<Model::Helix> helices;
-			for(std::map<int, Helix>::iterator it = m_file.helices.begin(); it != m_file.helices.end(); ++it)
+			for (std::map<int, Helix>::iterator it = m_file.helices.begin(); it != m_file.helices.end(); ++it)
 				helices.push_back(it->second.helix);
-			
+
 			if (!(status = Model::Object::Select(helices.begin(), helices.end()))) {
 				status.perror("Object::Select");
 			}

@@ -60,7 +60,7 @@ namespace Helix {
 				Base base;
 				char name;
 
-				if (sscanf(line.c_str(), "%u %c %d %d", &base.strand, &name, &base.forward, &base.backward) == 4) {
+				if (sscanf(line.c_str(), "%u %c %d %d", &base.strand, &name, &base.forward, &base.backward) == 4) {/*ERIK Do i need to flip the connection order here ?*/
 					if (previousStrandIndex != base.strand) {
 						previousStrandIndex = base.strand;
 						strandBaseIndexOffset.insert(std::make_pair(previousStrandIndex, baseIndex));
@@ -103,7 +103,11 @@ namespace Helix {
 						HPRINT("Error when parsing file, base index %d out of bounds.", baseIndex);
 						return MStatus::kFailure;
 					}
-					it->second.translation = baseTranslation;
+					baseTranslation.x = (baseTranslation.x + baseVector.x * -0.35) * 0.8518;/*Erik rescale from center of bas to backbone posiston and from oxDNA units to nm*/
+					baseTranslation.y = (baseTranslation.y + baseVector.y * -0.35) * 0.8518;
+					baseTranslation.z = (baseTranslation.z + baseVector.z * -0.35) * 0.8518;
+
+					it->second.translation = baseTranslation;;
 
 					++baseIndex;
 				}

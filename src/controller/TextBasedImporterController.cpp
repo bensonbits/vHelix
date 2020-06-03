@@ -87,7 +87,7 @@ namespace Helix {
 			unsigned int bases;
 			char nameBuffer[BUFFER_SIZE], helixNameBuffer[BUFFER_SIZE], materialNameBuffer[BUFFER_SIZE], targetNameBuffer[BUFFER_SIZE], targetHelixNameBuffer[BUFFER_SIZE];
 			char label;
-			bool autostaple(false);
+			bool autostaple(true); /* ERIK I TESTED changing default ot True */
 			std::vector< std::pair<std::string, std::string> > paintStrands;
 			std::vector<Model::Base> paintStrandBases, disconnectBackwardBases;
 

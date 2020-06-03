@@ -1026,7 +1026,8 @@ namespace Helix {
 				} else {
 					HPRINT("Failure to obtain any basis. Can't decide on a direction along the axis.");
 					status = MStatus::kFailure;
-					return 0;
+					/*return 0;*/
+					return 1;
 				}
 			}
 		}
